@@ -47,7 +47,7 @@ export const metadata: Metadata = {
   title: "NOMAD — one-of-one vintage band tees, found on the road",
   description:
     "A demo rack of one-of-one vintage band tees. Every tee was found somewhere in the world. Flip through the rail.",
-  metadataBase: new URL("https://nomad-clothing.vercel.app"),
+  metadataBase: new URL("https://nomad-tees.vercel.app"),
 };
 
 export const viewport: Viewport = {

@@ -18,3 +18,9 @@ Set `DATABASE_URL` (Neon) for the sticker wall API. Optional: `STICKER_SALT` for
 ## Flags
 
 Flip in the browser console: `localStorage.setItem("nomad:flag:<name>", "1" | "0")`. See `src/lib/flags.ts`.
+
+## Where things live
+
+- Production: https://nomad-tees.vercel.app (Vercel project `nomad-clothing`, team `saxqb777s-projects`, production branch `claude/happy-brahmagupta-hv0bt7`)
+- Database: Neon project `nomad` (`twilight-feather-39374878`, eu-central-1), table `stickers`
+- Functions region: fra1
