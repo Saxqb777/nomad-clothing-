@@ -1,0 +1,229 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────────────────────
+   NOMAD design tokens
+   paper  : photographic seamless backdrop, slightly dusty
+   ink    : warm near-black for type
+   stamp  : postmark blue, the one accent (customs stamp ink)
+   kraft  : swing-tag card
+   ────────────────────────────────────────────────────────────── */
+@theme {
+  --color-paper: #ecebe6;
+  --color-paper-lit: #f8f7f4;
+  --color-paper-deep: #dedcd5;
+  --color-ink: #17161a;
+  --color-ink-soft: #5f5c58;
+  --color-ink-faint: #a09c95;
+  --color-stamp: #2f3f8f;
+  --color-stamp-deep: #223070;
+  --color-kraft: #cdb68e;
+  --color-kraft-deep: #b79c6f;
+  --color-night: #0b0b0d;
+  --color-night-soft: #1a1a1f;
+  --color-phosphor: #c8ffb4;
+  --color-label: #fffdf5;
+  --color-rail: #9d9d9b;
+
+  --font-display: var(--font-bricolage), "Bricolage Grotesque", sans-serif;
+  --font-body: var(--font-archivo), "Archivo", sans-serif;
+  --font-mono: var(--font-courier), "Courier Prime", "Courier New", monospace;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-swing: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root {
+  --bx: 50vw;
+  --by: 50vh;
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+  transition: background-color 600ms ease;
+}
+
+body[data-lights="out"] {
+  background: var(--color-night);
+  color: #d8d6d0;
+  color-scheme: dark;
+}
+
+/* The seamless-paper sweep behind the rail: lit centre, falls off to the edges */
+.sweep {
+  background:
+    radial-gradient(120% 70% at 50% 30%, var(--color-paper-lit) 0%, var(--color-paper) 55%, var(--color-paper-deep) 120%);
+}
+body[data-lights="out"] .sweep {
+  background: var(--color-night);
+}
+
+/* Postmark / rubber-stamp look */
+.stamp {
+  color: var(--color-stamp);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  filter: url(#stampInk);
+}
+.stamp-box {
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  transform: rotate(-3deg);
+}
+
+/* Price-gun label */
+.pricelabel {
+  background: var(--color-label);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-variation-settings: "wdth" 80;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem 0.1rem;
+  border-radius: 2px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+.pricelabel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, transparent 0 4px, rgba(0, 0, 0, 0.025) 4px 5px);
+  pointer-events: none;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+.font-body {
+  font-family: var(--font-body);
+}
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Focus ring: visible, brand-coloured, never the browser default blue blob */
+:focus-visible {
+  outline: 2px solid var(--color-stamp);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+body[data-lights="out"] :focus-visible {
+  outline-color: var(--color-phosphor);
+}
+
+/* Rail */
+.rail-viewport {
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.rail-viewport.dragging {
+  cursor: grabbing;
+}
+.hanger {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 50% 0;
+  will-change: transform;
+}
+.rail-viewport:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-stamp) 45%, transparent);
+  border-radius: 12px;
+}
+.hanger-swing {
+  transform-style: preserve-3d;
+  transform-origin: 50% 0;
+  will-change: transform;
+}
+.hanger-face {
+  backface-visibility: hidden;
+}
+.hanger-edge {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform-origin: 0 0;
+  backface-visibility: hidden;
+}
+
+/* Beam overlay for Lights Out */
+.beam-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 45;
+  background: radial-gradient(
+    circle 300px at var(--bx) var(--by),
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.1) 35%,
+    rgba(0, 0, 0, 0.72) 62%,
+    rgba(5, 5, 7, 0.985) 100%
+  );
+}
+@media (max-width: 640px) {
+  .beam-overlay {
+    background: radial-gradient(
+      circle 190px at var(--bx) var(--by),
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 0.1) 35%,
+      rgba(0, 0, 0, 0.72) 62%,
+      rgba(5, 5, 7, 0.985) 100%
+    );
+  }
+}
+.glow-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 46;
+}
+
+/* Lanyard passes */
+.pass-laminate {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0) 60%, rgba(255, 255, 255, 0.25) 100%);
+}
+
+/* Ticket stub perforation */
+.perf-edge {
+  --perf: 10px;
+  mask: radial-gradient(circle at var(--perf) 50%, transparent 5px, black 5.5px) -10px 0 / var(--perf) 100% repeat-x;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scrollbar-less horizontal lists */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
