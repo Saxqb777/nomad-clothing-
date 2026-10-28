@@ -60,6 +60,7 @@ export const Rail = forwardRef<RailHandle, RailProps>(function Rail(
   const glowSwingRefs = useRef<(HTMLDivElement | null)[]>([]);
   const labelRef = useRef<HTMLDivElement>(null);
   const hitsRef = useRef<HTMLDivElement>(null);
+  const enteredRef = useRef(false);
   const edgeRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const simRef = useRef<RailSim | null>(null);
@@ -154,7 +155,9 @@ export const Rail = forwardRef<RailHandle, RailProps>(function Rail(
         for (let k = 0; k < sim.n; k++) sim.faceT[k] = k === near ? 0.3 : 0;
       }
 
+      const wasEntering = sim.entering;
       sim.step(dt);
+      if (wasEntering && !sim.entering) enteredRef.current = true;
 
       if (wasDiggingRef.current && !sim.digging) {
         wasDiggingRef.current = false;
@@ -191,9 +194,18 @@ export const Rail = forwardRef<RailHandle, RailProps>(function Rail(
       reducedMotion: reduced,
     });
     simRef.current = sim;
-    sim.offset = sim.centreOffsetFor(Math.floor(tees.length / 2) - 1);
-    sim.resetMotion();
-    sim.bump(0.6);
+    const centre = sim.centreOffsetFor(Math.floor(tees.length / 2) - 1);
+    if (!enteredRef.current && !reduced) {
+      // page open: the rack slides in from the right and settles in the middle.
+      // enteredRef flips once the slide finishes (or the visitor grabs the rail),
+      // so a sim re-created a frame later by the viewport hook restarts it rather than skipping it.
+      sim.startEntry(centre + vp.clientWidth * 0.9, centre, 1.6);
+    } else {
+      enteredRef.current = true;
+      sim.offset = centre;
+      sim.resetMotion();
+      sim.bump(0.6);
+    }
     writeFrame();
     wake();
 
@@ -280,6 +292,10 @@ export const Rail = forwardRef<RailHandle, RailProps>(function Rail(
     sim.offsetTarget = null;
     centreOnRef.current = null;
     sim.digging = false;
+    if (sim.entering) {
+      sim.cancelEntry();
+      enteredRef.current = true;
+    }
     sim.vel = 0;
     viewportRef.current?.classList.add("dragging");
     wake();
@@ -391,7 +407,7 @@ export const Rail = forwardRef<RailHandle, RailProps>(function Rail(
             if (glow) glowHangerRefs.current[i] = el;
             else hangerRefs.current[i] = el;
           }}
-          style={{ width: GW, height: GH, opacity: hidden ? 0 : 1, transition: "opacity 200ms" }}
+          style={{ width: GW, height: GH, opacity: hidden ? 0 : 1, transition: "opacity 200ms", transform: "translate3d(-200vw,0,0)" }}
           aria-hidden={glow ? true : undefined}
         >
           <div
@@ -400,7 +416,7 @@ export const Rail = forwardRef<RailHandle, RailProps>(function Rail(
               if (glow) glowSwingRefs.current[i] = el;
               else swingRefs.current[i] = el;
             }}
-            style={{ width: GW, height: GH, transformOrigin: "50% 50%" }}
+            style={{ width: GW, height: GH, transformOrigin: "50% 50%", transform: `perspective(1100px) rotateY(${SIDE_DEG}deg)` }}
           >
             <div className="hanger-face" style={{ width: GW, height: GH }}>
               <Garment garment={t.garment} colourway={t.defaultColourway} print={t.print} seed={t.seed} age={0} quality="rail" mode={glow ? "glow" : "ink"} />
@@ -494,7 +510,7 @@ export const Rail = forwardRef<RailHandle, RailProps>(function Rail(
             aria-label={`${bandOf(t).name}, ${bandOf(t).tour} ${bandOf(t).year}, ${formatAED(t.price)}`}
             tabIndex={-1}
             onPointerEnter={() => {
-              if (hoverCapable.current && focusedRef.current === null && !drag.current.active) face(i);
+              if (hoverCapable.current && focusedRef.current === null && !drag.current.active && !simRef.current?.entering) face(i);
             }}
             onClick={(e) => {
               if (suppressClick.current) {

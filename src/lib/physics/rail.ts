@@ -57,6 +57,10 @@ export class RailSim {
   /** True while a Dig fling is running. */
   digging = false;
   digTargetIndex = -1;
+  /** Page-open entrance: the whole rack slides in from one end. */
+  private entry: { t: number; duration: number; from: number; to: number } | null = null;
+  private entryEase = 1;
+  private entryLag: Float64Array;
 
   cfg: RailConfig;
   knocks: Knock[] = [];
@@ -75,6 +79,7 @@ export class RailSim {
     this.prevScreen = new Float64Array(this.n);
     this.prevV = new Float64Array(this.n);
     this.knockCooldown = new Float64Array(this.n);
+    this.entryLag = new Float64Array(this.n);
     this.layout();
     this.x.set(this.xT);
     for (let i = 0; i < this.n; i++) this.prevScreen[i] = this.offset + this.x[i];
@@ -89,7 +94,7 @@ export class RailSim {
     let cursor = this.cfg.pad;
     for (let i = 0; i < this.n; i++) {
       const s = this.slot(this.face[i]);
-      this.xT[i] = cursor + s / 2;
+      this.xT[i] = cursor + s / 2 + (this.entry ? this.entryLag[i] * (1 - this.entryEase) : 0);
       cursor += s + this.cfg.gap;
     }
     this.trackWidth = cursor - this.cfg.gap + this.cfg.pad;
@@ -113,6 +118,32 @@ export class RailSim {
 
   faceNone() {
     this.faceT.fill(0);
+  }
+
+  /**
+   * Slide the whole rack in from `from` to `to` over `duration` seconds.
+   * Hangers further along lag a little, so they arrive bunched and spread out as they stop.
+   */
+  startEntry(from: number, to: number, duration: number, lagPer = 16) {
+    this.entry = { t: 0, duration, from, to };
+    this.entryEase = 0;
+    for (let i = 0; i < this.n; i++) this.entryLag[i] = i * lagPer;
+    this.offset = from;
+    this.layout();
+    this.x.set(this.xT);
+    this.resetMotion();
+  }
+
+  get entering() {
+    return this.entry !== null;
+  }
+
+  cancelEntry() {
+    if (!this.entry) return;
+    this.entry = null;
+    this.entryEase = 1;
+    this.layout();
+    this.resetMotion();
   }
 
   /** Forget previous positions so a jump in offset does not read as acceleration. */
@@ -146,7 +177,7 @@ export class RailSim {
 
   /** Is the sim at rest? Used to stop the animation frame loop. */
   settled() {
-    if (this.dragging || this.offsetTarget !== null || this.digging) return false;
+    if (this.dragging || this.offsetTarget !== null || this.digging || this.entry) return false;
     if (Math.abs(this.vel) > 0.4) return false;
     if (this.offset > this.maxOffset + 0.5 || this.offset < this.minOffset - 0.5) return false;
     for (let i = 0; i < this.n; i++) {
@@ -164,7 +195,21 @@ export class RailSim {
     this.knocks.length = 0;
 
     // ── rail scroll ──
-    if (this.digging && this.digTargetIndex >= 0) {
+    if (this.entry) {
+      const e = this.entry;
+      e.t += dt;
+      const p = Math.min(1, e.t / e.duration);
+      const ease = 1 - Math.pow(1 - p, 2.2);
+      const next = e.from + (e.to - e.from) * ease;
+      this.vel = (next - this.offset) / dt;
+      this.offset = next;
+      this.entryEase = ease;
+      if (p >= 1) {
+        this.entry = null;
+        this.entryEase = 1;
+        this.vel = 0;
+      }
+    } else if (this.digging && this.digTargetIndex >= 0) {
       const target = this.centreOffsetFor(this.digTargetIndex);
       const d = target - this.offset;
       if (Math.abs(d) < 520 || rm) {
